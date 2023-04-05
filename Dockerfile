@@ -12,15 +12,44 @@ RUN mkdir -p /var/www/
 RUN apt update --fix-missing
 RUN  DEBIAN_FRONTEND=noninteractive
 RUN ln -snf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && echo Asia/Kolkata > /etc/timezone
-RUN apt install git zip unzip curl gnupg2 ca-certificates lsb-release libicu-dev supervisor nginx -y
+RUN apt install -y \
+      software-properties-common \
+      git \
+      zip \
+      unzip \
+      curl \
+      ca-certificates \
+      lsb-release \
+      libicu-dev \
+      supervisor \
+      nginx \
+      nano \
+      cron 
 
 # Install php7.4-fpm
 # Since the repo is supported on ubuntu 20
-RUN apt install php-fpm php-json php-pdo php-mysql php-zip php-gd php-mbstring php-curl php-xml php-pear php-bcmath php-intl -y
+RUN apt install -y \
+      php-fpm \
+      php-json \
+      php-pdo \
+      php-mysql \
+      php-zip \
+      php-gd \
+      php-mbstring \
+      php-curl \
+      php-xml \
+      php-pear \
+      php-bcmath \
+      php-intl
 
 # Install composer
-COPY --from=composer:1.10.15 /usr/bin/composer /usr/local/bin/composer
+COPY --from=composer:2.5.4 /usr/bin/composer /usr/local/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV PATH="./vendor/bin:$PATH"
 RUN composer --help
+
+RUN echo "* * * * * /usr/local/bin/php /var/www/artisan schedule:run >> /dev/null 2>&1"  >> /etc/cron.d/laravel-scheduler
+RUN chmod 0644 /etc/cron.d/laravel-scheduler
 
 RUN rm /etc/nginx/sites-enabled/default
 
@@ -28,6 +57,7 @@ COPY php.ini /etc/php/7.4/fpm/php.ini
 COPY www.conf /etc/php/7.4/fpm/pool.d/www.conf
 COPY default.conf /etc/nginx/conf.d/
 COPY supervisord.conf /etc/supervisor/conf.d/
+COPY horizon.conf /etc/supervisor/conf.d/
 
 # # Prevent exit
 ENTRYPOINT ["/usr/bin/supervisord"]
